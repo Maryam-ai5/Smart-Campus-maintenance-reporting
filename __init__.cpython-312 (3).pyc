@@ -1,0 +1,38 @@
+{% extends 'base.html' %}
+{% block title %}Notifications — CampusFix{% endblock %}
+{% block page_title %}Notifications{% endblock %}
+{% block content %}
+<div class="animate-in">
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4">
+        <h4 class="fw-bold mb-0">🔔 Notifications {% if unread > 0 %}<span class="badge bg-danger ms-2">{{ unread }} unread</span>{% endif %}</h4>
+        <div class="d-flex gap-2">
+            <a href="?filter=all" class="btn btn-sm {% if filter_type=='all' %}btn-primary-custom{% else %}btn-outline-custom{% endif %}">All</a>
+            <a href="?filter=unread" class="btn btn-sm {% if filter_type=='unread' %}btn-primary-custom{% else %}btn-outline-custom{% endif %}">Unread</a>
+            {% if unread > 0 %}
+            <form method="POST" action="{{ url_for('shared.mark_all_read') }}" style="display:inline;"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button type="submit" class="btn btn-sm btn-outline-custom"><i class="bi bi-check2-all me-1"></i>Mark All Read</button></form>
+            {% endif %}
+        </div>
+    </div>
+    <div class="content-card">
+        <div class="card-body-custom p-0">
+            {% if notifications %}
+            {% for n in notifications %}
+            <div class="notification-item {% if not n.is_read %}unread{% endif %}">
+                <div class="notification-dot {% if not n.is_read %}unread{% else %}read{% endif %}"></div>
+                <div class="flex-grow-1">
+                    <p class="mb-1" style="font-size:0.9rem;">{{ n.message }}</p>
+                    <small class="text-secondary">{{ n.created_at.strftime('%b %d, %Y at %I:%M %p') }}</small>
+                </div>
+                <div class="d-flex gap-1 align-items-center">
+                    {% if n.report_id %}<a href="{{ url_for('student.report_detail', report_id=n.report_id) }}" class="btn btn-sm btn-outline-custom">View</a>{% endif %}
+                    {% if not n.is_read %}<form method="POST" action="{{ url_for('shared.mark_read', notif_id=n.id) }}" style="display:inline;"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button type="submit" class="btn btn-sm btn-outline-custom" title="Mark as read"><i class="bi bi-check2"></i></button></form>{% endif %}
+                </div>
+            </div>
+            {% endfor %}
+            {% else %}
+            <div class="empty-state"><i class="bi bi-bell-slash"></i><p>No notifications{% if filter_type == 'unread' %} (unread){% endif %}.</p></div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

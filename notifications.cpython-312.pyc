@@ -1,0 +1,131 @@
+{% extends 'base.html' %}
+{% block title %}Maintenance Panel — CampusFix{% endblock %}
+{% block page_title %}Maintenance Panel{% endblock %}
+{% block content %}
+<div class="animate-in">
+    <div class="row g-3 mb-4">
+        <div class="col-md-4">
+            <div class="stat-card yellow">
+                <div class="stat-icon yellow"><i class="bi bi-ticket-detailed"></i></div>
+                <div class="stat-value">{{ open_count }}</div>
+                <div class="stat-label">Open Tickets</div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="stat-card red">
+                <div class="stat-icon red"><i class="bi bi-exclamation-triangle"></i></div>
+                <div class="stat-value">{{ high_priority }}</div>
+                <div class="stat-label">High Priority</div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="stat-card green">
+                <div class="stat-icon green"><i class="bi bi-check2-all"></i></div>
+                <div class="stat-value">{{ resolved_today }}</div>
+                <div class="stat-label">Resolved Today</div>
+            </div>
+        </div>
+    </div>
+    <div class="filter-bar">
+        <form method="GET" class="row g-2 align-items-end">
+            <div class="col-6 col-md-2">
+                <label class="form-label">Status</label>
+                <select name="status" class="form-select"><option value="">All</option>
+                    <option value="submitted" {% if status_filter=='submitted' %}selected{% endif %}>Submitted</option>
+                    <option value="assigned" {% if status_filter=='assigned' %}selected{% endif %}>Assigned</option>
+                    <option value="in_progress" {% if status_filter=='in_progress' %}selected{% endif %}>In Progress</option>
+                    <option value="resolved" {% if status_filter=='resolved' %}selected{% endif %}>Resolved</option>
+                </select>
+            </div>
+            <div class="col-6 col-md-3">
+                <label class="form-label">Category</label>
+                <select name="category" class="form-select"><option value="">All</option>
+                    {% for cat in categories %}<option value="{{ cat.id }}" {% if category_filter==cat.id|string %}selected{% endif %}>{{ cat.icon }} {{ cat.name }}</option>{% endfor %}
+                </select>
+            </div>
+            <div class="col-6 col-md-2">
+                <label class="form-label">Priority</label>
+                <select name="urgency" class="form-select"><option value="">All</option>
+                    <option value="high" {% if urgency_filter=='high' %}selected{% endif %}>High</option>
+                    <option value="medium" {% if urgency_filter=='medium' %}selected{% endif %}>Medium</option>
+                    <option value="low" {% if urgency_filter=='low' %}selected{% endif %}>Low</option>
+                </select>
+            </div>
+            <div class="col-6 col-md-2">
+                <label class="form-label">Sort</label>
+                <select name="sort" class="form-select">
+                    <option value="newest" {% if sort=='newest' %}selected{% endif %}>Newest</option>
+                    <option value="oldest" {% if sort=='oldest' %}selected{% endif %}>Oldest</option>
+                    <option value="priority" {% if sort=='priority' %}selected{% endif %}>Priority</option>
+                </select>
+            </div>
+            <div class="col-md-3"><button type="submit" class="btn btn-primary-custom w-100"><i class="bi bi-funnel me-1"></i>Filter</button></div>
+        </form>
+    </div>
+    <div class="content-card">
+        <div class="card-body-custom p-0">
+            {% if reports.items %}
+            <div class="table-responsive">
+                <table class="table table-modern">
+                    <thead><tr><th>#</th><th>Category</th><th>Location</th><th>Reporter</th><th>Urgency</th><th>Status</th><th>Date</th><th>Actions</th></tr></thead>
+                    <tbody>
+                    {% for r in reports.items %}
+                    <tr>
+                        <td class="fw-semibold">#{{ r.id }}</td>
+                        <td>{{ r.category_ref.icon }} {{ r.category_ref.name }}</td>
+                        <td>{{ r.location|truncate(25) }}</td>
+                        <td>{{ r.reporter.name }}</td>
+                        <td><span class="badge-status badge-urgency-{{ r.urgency }}">{{ r.urgency_label }}</span></td>
+                        <td><span class="badge-status badge-{{ r.status }}">{{ r.status_label }}</span></td>
+                        <td style="font-size:0.8rem;color:var(--text-secondary);">{{ r.created_at.strftime('%b %d') }}</td>
+                        <td>
+                            <div class="d-flex gap-1">
+                                <a href="{{ url_for('student.report_detail', report_id=r.id) }}" class="btn btn-sm btn-outline-custom">View</a>
+                                <button class="btn btn-sm btn-primary-custom" data-bs-toggle="modal" data-bs-target="#updateModal{{ r.id }}">Update</button>
+                            </div>
+                        </td>
+                    </tr>
+                    <!-- Modal -->
+                    <div class="modal fade" id="updateModal{{ r.id }}" tabindex="-1">
+                        <div class="modal-dialog"><div class="modal-content">
+                            <div class="modal-header"><h5 class="modal-title">Update Report #{{ r.id }}</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+                            <form method="POST" action="{{ url_for('maintenance.update_status', report_id=r.id) }}">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <div class="modal-body">
+                                    <div class="mb-3">
+                                        <label class="form-label">New Status</label>
+                                        <select name="status" class="form-select" required>
+                                            <option value="assigned" {% if r.status=='assigned' %}selected{% endif %}>Assigned</option>
+                                            <option value="in_progress" {% if r.status=='in_progress' %}selected{% endif %}>In Progress</option>
+                                            <option value="resolved">Resolved</option>
+                                        </select>
+                                    </div>
+                                    <div class="mb-3"><label class="form-label">Note</label><textarea name="note" class="form-control" rows="3" placeholder="Add resolution note..." maxlength="500"></textarea></div>
+                                </div>
+                                <div class="modal-footer"><button type="button" class="btn btn-outline-custom" data-bs-dismiss="modal">Cancel</button><button type="submit" class="btn btn-primary-custom">Save</button></div>
+                            </form>
+                        </div></div>
+                    </div>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% if reports.pages > 1 %}
+            <nav class="d-flex justify-content-center py-3">
+                <ul class="pagination mb-0">
+                    {% if reports.has_prev %}<li class="page-item"><a class="page-link" href="?page={{ reports.prev_num }}&status={{ status_filter }}&category={{ category_filter }}&urgency={{ urgency_filter }}&sort={{ sort }}">‹</a></li>{% endif %}
+                    {% for p in reports.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+                        {% if p %}<li class="page-item {% if p == reports.page %}active{% endif %}"><a class="page-link" href="?page={{ p }}&status={{ status_filter }}&category={{ category_filter }}&urgency={{ urgency_filter }}&sort={{ sort }}">{{ p }}</a></li>
+                        {% else %}<li class="page-item disabled"><span class="page-link">…</span></li>{% endif %}
+                    {% endfor %}
+                    {% if reports.has_next %}<li class="page-item"><a class="page-link" href="?page={{ reports.next_num }}&status={{ status_filter }}&category={{ category_filter }}&urgency={{ urgency_filter }}&sort={{ sort }}">›</a></li>{% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+            {% else %}
+            <div class="empty-state"><i class="bi bi-clipboard-check"></i><p>No tickets matching your filters.</p></div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

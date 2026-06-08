@@ -1,0 +1,87 @@
+{% extends 'base.html' %}
+{% block title %}Report #{{ report.id }} — CampusFix{% endblock %}
+{% block page_title %}Report #{{ report.id }}{% endblock %}
+{% block content %}
+<div class="animate-in">
+    <div class="row g-4">
+        <div class="col-lg-8">
+            <div class="content-card mb-4">
+                <div class="card-header-custom">
+                    <h5><i class="bi bi-file-earmark-text me-2"></i>Report Details</h5>
+                    <span class="badge-status badge-{{ report.status }}">{{ report.status_label }}</span>
+                </div>
+                <div class="card-body-custom">
+                    <div class="row g-3 mb-3">
+                        <div class="col-sm-6"><strong class="d-block text-secondary" style="font-size:0.8rem;">Category</strong>{{ report.category_ref.icon }} {{ report.category_ref.name }}</div>
+                        <div class="col-sm-6"><strong class="d-block text-secondary" style="font-size:0.8rem;">Location</strong>{{ report.location }}</div>
+                        <div class="col-sm-6"><strong class="d-block text-secondary" style="font-size:0.8rem;">Urgency</strong><span class="badge-status badge-urgency-{{ report.urgency }}">{{ report.urgency_label }}</span></div>
+                        <div class="col-sm-6"><strong class="d-block text-secondary" style="font-size:0.8rem;">Submitted by</strong>{{ report.reporter.name }}</div>
+                        <div class="col-sm-6"><strong class="d-block text-secondary" style="font-size:0.8rem;">Created</strong>{{ report.created_at.strftime('%B %d, %Y at %I:%M %p') }}</div>
+                        <div class="col-sm-6"><strong class="d-block text-secondary" style="font-size:0.8rem;">Last Updated</strong>{{ report.updated_at.strftime('%B %d, %Y at %I:%M %p') }}</div>
+                    </div>
+                    <hr>
+                    <strong class="d-block text-secondary mb-2" style="font-size:0.8rem;">Description</strong>
+                    <p>{{ report.description }}</p>
+                    {% if report.photo_path %}
+                    <strong class="d-block text-secondary mb-2" style="font-size:0.8rem;">Attached Photo</strong>
+                    <img src="{{ url_for('static', filename='uploads/' + report.photo_path) }}" class="image-preview" alt="Report photo" onclick="window.open(this.src)">
+                    {% endif %}
+                </div>
+            </div>
+            {% if current_user.role in ('maintenance', 'admin') %}
+            <div class="content-card">
+                <div class="card-header-custom"><h5><i class="bi bi-pencil-square me-2"></i>Update Status</h5></div>
+                <div class="card-body-custom">
+                    <form method="POST" action="{{ url_for('maintenance.update_status', report_id=report.id) }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <label class="form-label">New Status</label>
+                                <select name="status" class="form-select" required>
+                                    <option value="assigned" {% if report.status=='assigned' %}selected{% endif %}>Assigned</option>
+                                    <option value="in_progress" {% if report.status=='in_progress' %}selected{% endif %}>In Progress</option>
+                                    <option value="resolved">Resolved</option>
+                                    {% if current_user.role == 'admin' %}<option value="submitted">Reopen</option>{% endif %}
+                                </select>
+                            </div>
+                            <div class="col-md-8">
+                                <label class="form-label">Note</label>
+                                <input type="text" name="note" class="form-control" placeholder="Add a note about this update...">
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-primary-custom mt-3"><i class="bi bi-check2 me-2"></i>Update</button>
+                    </form>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+        <div class="col-lg-4">
+            <div class="content-card">
+                <div class="card-header-custom"><h5><i class="bi bi-clock-history me-2"></i>Timeline</h5></div>
+                <div class="card-body-custom">
+                    <div class="timeline">
+                        {% for u in updates %}
+                        <div class="timeline-item">
+                            <div class="timeline-dot {{ u.new_status }}{% if loop.last and report.status == 'resolved' %} filled{% endif %}"></div>
+                            <div class="timeline-content">
+                                <h6>{{ u.new_status|replace('_',' ')|title }}</h6>
+                                {% if u.note %}<p>{{ u.note }}</p>{% endif %}
+                                <small>{{ u.updater.name }} · {{ u.timestamp.strftime('%b %d, %I:%M %p') }}</small>
+                            </div>
+                        </div>
+                        {% endfor %}
+                        {% set remaining = ['submitted','assigned','in_progress','resolved'] %}
+                        {% set current_idx = remaining.index(report.status) if report.status in remaining else 0 %}
+                        {% for s in remaining[current_idx+1:] %}
+                        <div class="timeline-item">
+                            <div class="timeline-dot pending"></div>
+                            <div class="timeline-content"><h6 style="color:var(--text-secondary);">{{ s|replace('_',' ')|title }}</h6><small>Pending</small></div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

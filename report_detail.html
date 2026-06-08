@@ -1,0 +1,62 @@
+{% extends 'base.html' %}
+{% block title %}Admin Dashboard — CampusFix{% endblock %}
+{% block page_title %}Admin Analytics{% endblock %}
+{% block content %}
+<div class="animate-in">
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-lg-3"><div class="stat-card blue"><div class="stat-icon blue"><i class="bi bi-file-earmark-text"></i></div><div class="stat-value">{{ total }}</div><div class="stat-label">Total Reports</div></div></div>
+        <div class="col-6 col-lg-3"><div class="stat-card yellow"><div class="stat-icon yellow"><i class="bi bi-exclamation-circle"></i></div><div class="stat-value">{{ open_count }}</div><div class="stat-label">Open Reports</div></div></div>
+        <div class="col-6 col-lg-3"><div class="stat-card green"><div class="stat-icon green"><i class="bi bi-check-circle"></i></div><div class="stat-value">{{ resolved }}</div><div class="stat-label">Resolved</div></div></div>
+        <div class="col-6 col-lg-3"><div class="stat-card blue"><div class="stat-icon cyan"><i class="bi bi-percent"></i></div><div class="stat-value">{{ resolution_rate }}%</div><div class="stat-label">Resolution Rate</div></div></div>
+    </div>
+    <div class="row g-4 mb-4">
+        <div class="col-lg-6">
+            <div class="content-card"><div class="card-header-custom"><h5>Reports by Category</h5></div><div class="card-body-custom"><div class="chart-container"><canvas id="catChart"></canvas></div></div></div>
+        </div>
+        <div class="col-lg-6">
+            <div class="content-card"><div class="card-header-custom"><h5>Reports Over Time (7 Days)</h5></div><div class="card-body-custom"><div class="chart-container"><canvas id="timeChart"></canvas></div></div></div>
+        </div>
+    </div>
+    <div class="row g-4 mb-4">
+        <div class="col-lg-6">
+            <div class="content-card"><div class="card-header-custom"><h5>Open vs Closed by Category</h5></div><div class="card-body-custom"><div class="chart-container"><canvas id="openClosedChart"></canvas></div></div></div>
+        </div>
+        <div class="col-lg-6">
+            <div class="content-card"><div class="card-header-custom"><h5>Urgency Distribution</h5></div><div class="card-body-custom"><div class="chart-container"><canvas id="urgChart"></canvas></div></div></div>
+        </div>
+    </div>
+    <div class="row g-4">
+        <div class="col-lg-8">
+            <div class="content-card"><div class="card-header-custom"><h5><i class="bi bi-activity me-2"></i>Recent Activity</h5></div><div class="card-body-custom">
+                {% if recent_activity %}
+                {% for a in recent_activity %}
+                <div class="activity-item">
+                    <div class="activity-icon" style="background:var(--primary-bg);color:var(--primary);"><i class="bi bi-arrow-right"></i></div>
+                    <div><strong>Report #{{ a.report_id }}</strong> → {{ a.new_status|replace('_',' ')|title }}<br><small class="text-secondary">by {{ a.updater.name }} · {{ a.timestamp.strftime('%b %d, %I:%M %p') }}</small></div>
+                </div>
+                {% endfor %}
+                {% else %}<div class="empty-state"><i class="bi bi-activity"></i><p>No recent activity.</p></div>{% endif %}
+            </div></div>
+        </div>
+        <div class="col-lg-4">
+            <div class="content-card"><div class="card-header-custom"><h5>Quick Actions</h5></div><div class="card-body-custom d-grid gap-2">
+                <a href="{{ url_for('admin.users') }}" class="btn btn-outline-custom text-start"><i class="bi bi-people me-2"></i>Manage Users</a>
+                <a href="{{ url_for('admin.categories') }}" class="btn btn-outline-custom text-start"><i class="bi bi-tags me-2"></i>Configure Categories</a>
+                <a href="{{ url_for('shared.search') }}" class="btn btn-outline-custom text-start"><i class="bi bi-search me-2"></i>Search Reports</a>
+            </div></div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+const catCtx = document.getElementById('catChart').getContext('2d');
+new Chart(catCtx, { type: 'doughnut', data: { labels: {{ cat_labels|tojson }}, datasets: [{ data: {{ cat_data|tojson }}, backgroundColor: ['#6366f1','#0ea5e9','#f59e0b','#10b981','#ef4444','#8b5cf6','#ec4899'] }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } } });
+const timeCtx = document.getElementById('timeChart').getContext('2d');
+new Chart(timeCtx, { type: 'line', data: { labels: {{ daily_labels|tojson }}, datasets: [{ label: 'Submitted', data: {{ daily_submitted|tojson }}, borderColor: '#6366f1', backgroundColor: 'rgba(99,102,241,0.1)', fill: true, tension: 0.4 }, { label: 'Resolved', data: {{ daily_resolved|tojson }}, borderColor: '#10b981', backgroundColor: 'rgba(16,185,129,0.1)', fill: true, tension: 0.4 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } }, scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } } } });
+const ocCtx = document.getElementById('openClosedChart').getContext('2d');
+new Chart(ocCtx, { type: 'bar', data: { labels: {{ cat_labels|tojson }}, datasets: [{ label: 'Open', data: {{ open_by_cat|tojson }}, backgroundColor: '#f59e0b' }, { label: 'Closed', data: {{ closed_by_cat|tojson }}, backgroundColor: '#10b981' }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } }, scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } } } });
+const urgCtx = document.getElementById('urgChart').getContext('2d');
+new Chart(urgCtx, { type: 'bar', data: { labels: ['High','Medium','Low'], datasets: [{ data: [{{ urg_high }},{{ urg_med }},{{ urg_low }}], backgroundColor: ['#ef4444','#f59e0b','#10b981'] }] }, options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { beginAtZero: true, ticks: { stepSize: 1 } } } } });
+</script>
+{% endblock %}
